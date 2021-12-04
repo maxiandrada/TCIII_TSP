@@ -15,7 +15,7 @@ import datetime
 import DB
 import json
 
-class CVRP:
+class TSP:
     def __init__(self,
                  M,
                  D,
@@ -39,7 +39,7 @@ class CVRP:
         
         self.__solInicial = ['Clark & Wright', 'Vecino cercano', 'Secuencial', 'Al azar']
         self._G = Grafo(M, D)                #Grafo original
-        self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
+        self.__S = Solucion(M, D, sum(D))    #Solucion general del TSP
         self.__Distancias = M                #Matriz de distancias
         self.__Demandas = D                  #Demandas de los clientes
         self.__capacidadMax = capac          #Capacidad max por vehiculo

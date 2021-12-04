@@ -197,7 +197,7 @@ def select_instanciaCompletaXSet(conn, setId):
 
 def select_instanciaXSet(conn, setId):
     """Solo consulta los datos 'simples' de la instancia, no incluye la matriz ni las demandas"""
-    sql =   f'''select Instancias.instanciaId,instanciaName,cantidadClientes,nroVehiculos,capacidad,optimoConocido
+    sql =   f'''select Instancias.instanciaId,instanciaName,optimoConocido
                 from Instancias INNER  JOIN InstanciasXSet ON InstanciasXSet.instanciaId = Instancias.instanciaId
                 WHERE setId = {setId}'''
     cur = conn.cursor()

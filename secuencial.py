@@ -1,8 +1,8 @@
 import re
 import math
 import time
-from CVRP import CVRP
-# from CVRPparalelo import CVRPparalelo
+from TSP import TSP
+# from TSPparalelo import TSPparalelo
 from Vertice import Vertice
 
 import os
@@ -172,5 +172,5 @@ nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direcci
 tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
 time = sys.argv[2]
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial', 0, tenureADD, tenureDROP, time, 0, optimo)
-cvrp.tabuSearch()
+tsp = TSP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial', 0, tenureADD, tenureDROP, time, 0, optimo)
+tsp.tabuSearch()

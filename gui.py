@@ -1,7 +1,7 @@
 import re
 import math
 from time import time
-from CVRP import CVRP
+from TSP import TSP
 from Vertice import Vertice
 import os
 from os import listdir
@@ -91,10 +91,11 @@ class GUI(QMainWindow):
         botonResolverInstancia = QPushButton("ResolverInstancia")
         botonResolverInstancia.clicked.connect(
             lambda: self.ventanaResolverInstancia())
+        
         # Boton ver Resultados
         botonVerResultados = QPushButton("Ver Resultados")
 
-        # Tabla Sets
+        # Tabla Sets (Conjunto de instancias)
         tablaSetProblema = QTableWidget()
         tablaSetProblema.setColumnCount(1)
         filasSets = DB.select_sets(self.conn)
@@ -106,15 +107,18 @@ class GUI(QMainWindow):
         tablaSetProblema.setSelectionBehavior(QTableView.SelectRows)
         tablaSetProblema.itemSelectionChanged.connect(
             lambda: self.establecerSetSeleccionado(tablaSetProblema, tablaInstancia))
-        # Tabla Instancias
+        
+        # Tabla Instancias (Instancias por Sets)
         tablaInstancia = QTableWidget()
         tablaInstancia.resizeColumnsToContents()
         tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
         tablaInstancia.itemSelectionChanged.connect(
             lambda: self.establecerInstanciaSeleccionada(tablaInstancia))
+        
         #Seleccionar primera fila en tablaInstancia
         tablaSetProblema.selectRow(0)
         tablaInstancia.selectRow(0)
+        
         #Configuración de Layouts
         layoutTablaSets.addWidget(tablaSetProblema, 0, 0)
         layoutTablaSets.addWidget(botonNuevoSet, 1, 0)
@@ -188,15 +192,13 @@ class GUI(QMainWindow):
         #Tabla para ver instancias a resolver
         tablaInstancias = QTableWidget()
         tablaInstancias.setColumnCount(5)
-        tablaInstancias.setHorizontalHeaderLabels(["Nombre", "Clientes", "Vehículos", "Capacidad", "Progreso"])
+        tablaInstancias.setHorizontalHeaderLabels(["Nombre", "Progreso"])
         tablaInstancias.setRowCount(len(instancias))
         self.barrasCargaInstancia = []
         for i in range(len(instancias)):
             barra = QProgressBar()
             tablaInstancias.setItem(i, 0, QTableWidgetItem(instancias[i][1]))
             tablaInstancias.setItem(i, 1, QTableWidgetItem(instancias[i][2]))
-            tablaInstancias.setItem(i, 2, QTableWidgetItem(instancias[i][3]))
-            tablaInstancias.setItem(i, 3, QTableWidgetItem(instancias[i][5]))
             tablaInstancias.setCellWidget(i, 4, barra)
             self.barrasCargaInstancia.append(barra)
 
@@ -229,7 +231,8 @@ class GUI(QMainWindow):
         layoutOpciones.addRow(botonIniciar)
         layoutPrincipal.addWidget(gBTablaInstancias, 0, 0)
         layoutPrincipal.addLayout(layoutOpciones, 1, 0)
-        botonIniciar.clicked.connect(lambda: self.resolverCVRPMejorado(instancias,
+        
+        botonIniciar.clicked.connect(lambda: self.resolverTSPMejorado(instancias,
                                                                        float(tiempo.text()),
                                                                        criterioTenure.currentIndex(),
                                                                        cbSolucionInicial.currentIndex(),
@@ -249,11 +252,12 @@ class GUI(QMainWindow):
             layout.removeRow(self.spinBoxParada)
 
 
-    def resolverCVRPMejorado(self, instancias, tiempo, criterioTenure, solucionInicial, cantidad, barras):
+    def resolverTSPMejorado(self, instancias, tiempo, criterioTenure, solucionInicial, cantidad, barras):
         if self.estadoParada == False:
             porcentaje = float("-inf")
         else:
             porcentaje = self.spinBoxParada.value()
+        
         print("Se resolverá ", cantidad)
         print("Demandas: ", instancias[4])
         indBarra = 0
@@ -271,7 +275,7 @@ class GUI(QMainWindow):
                 coordenadas = json.loads(instancia[7])
                 M = self.cargaMatrizDistancias(coordenadas)
                 tenureADD, tenureDROP = self.aplicarCriterioTenure(criterioTenure, n)
-                cvrp = CVRP(
+                tsp = TSP(
                     M,
                     D,
                     k,
@@ -292,9 +296,9 @@ class GUI(QMainWindow):
                     orden=_,
                     indBarra=indBarra
                 )
-                self.hiloGrafico = Worker(cvrp.tabuSearch)
+                self.hiloGrafico = Worker(tsp.tabuSearch)
                 self.hiloGrafico.signals.valorBarra.connect(self.establecerProgresoBarra)
-                cvrp.setHilo(self.hiloGrafico)
+                tsp.setHilo(self.hiloGrafico)
                 self.threadpool.start(self.hiloGrafico)
             indBarra += 1
 
@@ -523,7 +527,7 @@ class GUI(QMainWindow):
         layoutBotones.addWidget(botonResolver)
         layoutBotones.addWidget(botonVerResultados)
 
-        resolver = lambda: self.resolverCVRP(instancia,
+        resolver = lambda: self.resolverTSP(instancia,
                                                         cbSolucionInicial,
                                                         sbTenureADD,
                                                         sbTenureDROP,
@@ -549,7 +553,7 @@ class GUI(QMainWindow):
         sbTenureADD.setValue(criteriosTenure[0])
         sbTenureDROP.setValue(criteriosTenure[1])
 
-    def resolverCVRP(self, instancia, cbSolucionInicial, sbTenureADD, sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, db, criterioTenure):
+    def resolverTSP(self, instancia, cbSolucionInicial, sbTenureADD, sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, db, criterioTenure):
         # Parámetros iniciales ingresados por el usuario
         solucionInicial = cbSolucionInicial.currentIndex()
         tenureADD = sbTenureADD.value()
@@ -565,7 +569,7 @@ class GUI(QMainWindow):
         optimo = instancia[6]
         self.coordenadas = json.loads(instancia[7])
         self.M = self.cargaMatrizDistancias(self.coordenadas)
-        cvrp = CVRP(
+        tsp = TSP(
             self.M,
             self.D,
             self.k,
@@ -583,13 +587,13 @@ class GUI(QMainWindow):
             criterioTenure, #Criterio que se tomó para calcular el tenure
             coordenadas=self.coordenadas
         )
-        self.dibujarRutaInicial(cvrp.getRutas())
-        self.hiloGrafico = Worker(cvrp.tabuSearch)
+        self.dibujarRutaInicial(tsp.getRutas())
+        self.hiloGrafico = Worker(tsp.tabuSearch)
         self.hiloGrafico.signals.ruta.connect(self.dibujarRutasNuevas)
         self.hiloGrafico.signals.rutaLista.connect(self.dibujarRutaInicial)
-        cvrp.setHilo(self.hiloGrafico)
+        tsp.setHilo(self.hiloGrafico)
         self.threadpool.start(self.hiloGrafico)
-        self.dibujarRutaInicial(cvrp.getRutas())
+        self.dibujarRutaInicial(tsp.getRutas())
 
     def datosParaDB(self, iterac, tiempo):
         s = self
@@ -1076,7 +1080,7 @@ class GUI(QMainWindow):
         self.rutasDict[i+1] = deposito
 
     def dibujarRutasNuevas(self, R):
-        """Dibuja rutas que vienen desde el CVRP"""
+        """Dibuja rutas que vienen desde el TSP"""
         indRutas = R["indRutas"]
         rutas = R["rutas"]
         print("recibió ruta")

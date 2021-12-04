@@ -1,8 +1,8 @@
 import re
 import math
 import time
-from CVRP import CVRP
-# from CVRPparalelo import CVRPparalelo
+from TSP import TSP
+# from TSPparalelo import TSPparalelo
 from Vertice import Vertice
 
 import os
@@ -158,8 +158,8 @@ def cargarDesdeFile2(pathArchivo):
                 demandas.append(float(splitLinea[1]))
         return nroVehiculos, optimo, capacidad, matrizDist, demandas     
 
-# direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set M/M-n200-k16.vrp"
-direccion = "C:\\Users\\Maxi\\Documents\\UNSA\\LAS\\5to Año\\1er cuatrimestre\\Optativa (Opt. Conc. y Paralela)\\Proyectos\\TPFinal_CVRP\\Instancias\\Set A\\A-n32-k5.vrp"
+# direccion = "/home/alumno/tpfinal_v2/MPIv3/tsp/Instancias/Set M/M-n200-k16.vrp"
+direccion = "C:\\Users\\Maxi\\Documents\\UNSA\\LAS\\5to Año\\1er cuatrimestre\\ .tsp"
 
 nombre = "A-n32-k5.vrp"
 
@@ -167,4 +167,4 @@ nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direcci
 tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
 time = 6.0
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0.1, optimo)
+tsp = TSP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0.1, optimo)
