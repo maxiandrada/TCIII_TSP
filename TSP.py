@@ -19,8 +19,6 @@ class TSP:
     def __init__(self,
                  M,
                  D,
-                 nroV,
-                 capac,
                  archivo,
                  carpeta,
                  solI,
@@ -41,10 +39,7 @@ class TSP:
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del TSP
         self.__Distancias = M                #Matriz de distancias
-        self.__Demandas = D                  #Demandas de los clientes
-        self.__capacidadMax = capac          #Capacidad max por vehiculo
         self.__rutas = []                    #Soluciones por vehiculo (lista de soluciones)
-        self.__nroVehiculos = nroV           #Nro de vehiculos disponibles
         self.__tipoSolucionIni = solI        #Tipo de solucion inicial (Clark & Wright, Vecino cercano, Secuencial o al Azar)
         self.__beta = 1                      #Parametro de dispersion
         self.__umbralMin = 0                 #Umbral de granularidad minimo

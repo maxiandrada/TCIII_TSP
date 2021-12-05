@@ -15,8 +15,8 @@ class Grafo:
             self._AristasUnicas = []
             self._grado = len(M)
             self._matrizDistancias = M
-            self._demanda = D
-            self._demandaAcumulada = []
+            # self._demanda = D
+            # self._demandaAcumulada = []
             if(M!=[] and D!=[]):
                 self.cargarDesdeMatriz(M, D)
         else:
@@ -30,14 +30,14 @@ class Grafo:
             self._costoAsociado = 0
             self._grado = len(M)
             self._matrizDistancias = M
-            self._demanda = D
-            self._demandaAcumulada = []
+            # self._demanda = D
+            # self._demandaAcumulada = []
 
     def getGrado(self):
         return self._grado
 
-    def getDemandaAcumulada(self):
-        return self._demandaAcumulada
+    # def getDemandaAcumulada(self):
+    #     return self._demandaAcumulada
     
     def cargarDesdeAristas(self, A):
         t = time()
@@ -45,15 +45,15 @@ class Grafo:
         V = []
         cap = 0
         costo = 0
-        demAcum = 0
-        self._demandaAcumulada = []
+        # demAcum = 0
+        # self._demandaAcumulada = []
         for a in A:
             v = a.getOrigen()
             V.append(v)
             costo += a.getPeso()
-            cap += self._demanda[v.getValue()-1]
-            demAcum += v.getDemanda()
-            self._demandaAcumulada.append(demAcum)
+            # cap += self._demanda[v.getValue()-1]
+            # demAcum += v.getDemanda()
+            # self._demandaAcumulada.append(demAcum)
         self._V = V
         self._costoAsociado = costo
         # print(f"CargaDesdeAristas: {time()-t}")
@@ -61,6 +61,7 @@ class Grafo:
     
     def setDemanda(self, D):
         self._demanda = D
+    
     def setA(self, A):
         self._A = A
         V = []

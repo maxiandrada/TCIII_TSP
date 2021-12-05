@@ -63,13 +63,27 @@ class GUI(QMainWindow):
         print("Multithreading with maximum %d threads" %
               self.threadpool.maxThreadCount())
 
+
+    def actualizarDatos(self):
+        filasSets = DB.select_sets(self.conn)
+        self.tablaSetProblema.setRowCount(len(filasSets))
+        self.tablaSetProblema.setHorizontalHeaderLabels(['Nombre Set'])
+        for i in range(len(filasSets)):
+            self.tablaSetProblema.setItem(i, 0, QTableWidgetItem(filasSets[i][1]))
+            self.tablaSetProblema.setColumnWidth(i, 200)
+        self.tablaSetProblema.setSelectionBehavior(QTableView.SelectRows)
+        self.tablaSetProblema.itemSelectionChanged.connect(
+            lambda: self.establecerSetSeleccionado(self.tablaSetProblema, self.tablaInstancia))
+        
+
     def seleccionarProblema(self):
 
         # Layout's
-        layoutPrincipal = QVBoxLayout()
-        layoutTablaSets = QGridLayout()
-        layoutAcciones = QHBoxLayout()
-        layoutTablaInstancias = QGridLayout()
+        layoutPrincipal = QVBoxLayout() # Va a contener a los demás layouts 
+        layoutTablaSets = QGridLayout() # Va a contener al conjunto de instancias
+        layoutTablaInstancias = QGridLayout() # Las instancias por set
+        layoutAcciones = QHBoxLayout() # Botones de acciones
+
         # QGroups
         gBTablaSets = QGroupBox("Sets de Problemas")
         gBTablaInstancias = QGroupBox("Instancias")
@@ -96,39 +110,41 @@ class GUI(QMainWindow):
         botonVerResultados = QPushButton("Ver Resultados")
 
         # Tabla Sets (Conjunto de instancias)
-        tablaSetProblema = QTableWidget()
-        tablaSetProblema.setColumnCount(1)
-        filasSets = DB.select_sets(self.conn)
-        tablaSetProblema.setRowCount(len(filasSets))
-        tablaSetProblema.setHorizontalHeaderLabels(['Nombre Set'])
-        for i in range(len(filasSets)):
-            tablaSetProblema.setItem(i, 0, QTableWidgetItem(filasSets[i][1]))
-            tablaSetProblema.setColumnWidth(i, 200)
-        tablaSetProblema.setSelectionBehavior(QTableView.SelectRows)
-        tablaSetProblema.itemSelectionChanged.connect(
-            lambda: self.establecerSetSeleccionado(tablaSetProblema, tablaInstancia))
+        self.tablaSetProblema = QTableWidget()
+        self.tablaSetProblema.setColumnCount(1)
+        
+        self.actualizarDatos()
+        # filasSets = DB.select_sets(self.conn)
+        # self.tablaSetProblema.setRowCount(len(filasSets))
+        # self.tablaSetProblema.setHorizontalHeaderLabels(['Nombre Set'])
+        # for i in range(len(filasSets)):
+        #     self.tablaSetProblema.setItem(i, 0, QTableWidgetItem(filasSets[i][1]))
+        #     self.tablaSetProblema.setColumnWidth(i, 200)
+        # self.tablaSetProblema.setSelectionBehavior(QTableView.SelectRows)
+        # self.tablaSetProblema.itemSelectionChanged.connect(
+        #     lambda: self.establecerSetSeleccionado(self.tablaSetProblema, tablaInstancia))
         
         # Tabla Instancias (Instancias por Sets)
-        tablaInstancia = QTableWidget()
-        tablaInstancia.resizeColumnsToContents()
-        tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
-        tablaInstancia.itemSelectionChanged.connect(
-            lambda: self.establecerInstanciaSeleccionada(tablaInstancia))
+        self.tablaInstancia = QTableWidget()
+        self.tablaInstancia.resizeColumnsToContents()
+        self.tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
+        self.tablaInstancia.itemSelectionChanged.connect(
+            lambda: self.establecerInstanciaSeleccionada(self.tablaInstancia))
         
         #Seleccionar primera fila en tablaInstancia
-        tablaSetProblema.selectRow(0)
-        tablaInstancia.selectRow(0)
+        self.tablaSetProblema.selectRow(0)
+        self.tablaInstancia.selectRow(0)
         
         #Configuración de Layouts
-        layoutTablaSets.addWidget(tablaSetProblema, 0, 0)
+        layoutTablaSets.addWidget(self.tablaSetProblema, 0, 0)
         layoutTablaSets.addWidget(botonNuevoSet, 1, 0)
-        layoutTablaInstancias.addWidget(tablaInstancia, 0, 0)
+        layoutTablaInstancias.addWidget(self.tablaInstancia, 0, 0)
         layoutTablaInstancias.addWidget(botonNuevaInstancia, 1, 0)
         layoutAcciones.addWidget(botonResolverInstancia)
         layoutAcciones.addWidget(botonVerResultados)
 
         botonVerResultados.clicked.connect(lambda: self.ventanaVerResultado(
-            self.instanciaSeleccionada, tablaInstancia.item(tablaInstancia.currentRow(), 1).text()))
+            self.instanciaSeleccionada, self.tablaInstancia.item(self.tablaInstancia.currentRow(), 1).text()))
 
         #Acciones
         #Programar resolver un conjunto
@@ -358,7 +374,8 @@ class GUI(QMainWindow):
                 filaInstancia = (self.nombreArchivo, int(self.cantidadClientes), self.__nroVehiculos, json.dumps(
                     self.__demanda), self.__capacidad, self.__optimo, json.dumps(self.coordenadas))
 
-                # print(filaInstancia)
+                print(filaInstancia)
+                
                 idFila = DB.insert_instancia(self.conn, filaInstancia)
                 setSeleccionado = self.setsSeleccionados[-1].text()
                 setSeleccionado = DB.select_sets_con_nombre(self.conn, setSeleccionado)[0]
@@ -389,13 +406,14 @@ class GUI(QMainWindow):
         layoutCargaSet.addWidget(botonOK, 1, 0)
         layoutCargaSet.addWidget(botonCancelar, 1, 1)
         ventanaCargarSet.setLayout(layoutCargaSet)
-        ventanaCargarSet.exec()
+        ventanaCargarSet.exec_()
 
     def cargarSetDB(self, nombre, ventana):
         if(nombre != ""):
-            # print("NOMBRE; ", nombre)
+            print("NOMBRE: ", nombre)
             DB.insert_set(self.conn, (nombre,))
             ventana.close()
+            self.actualizarDatos()
         else:
             error_dialog = QErrorMessage()
             error_dialog.setWindowTitle("ERROR")
@@ -448,8 +466,8 @@ class GUI(QMainWindow):
             tablaInstancia.setItem(
                 i, 5, QTableWidgetItem(str(filasInstancias[i][5])))
         self.instanciaSeleccionada = filasInstancias[0][0]
-        #tablaInstancia.selectRow(0)
-        #tablaInstancia.setCurrentIndex(QtCore.QModelIndex().child(0,0))
+        #self.tablaInstancia.selectRow(0)
+        #self.tablaInstancia.setCurrentIndex(QtCore.QModelIndex().child(0,0))
 
     def ventanaResolverInstancia(self):
         instancia = DB.select_instancia(
@@ -951,8 +969,8 @@ class GUI(QMainWindow):
         layout.addWidget(w1)
 
         return w1
-    # Obtengo los datos de mis archivos .vrp
-
+    
+    # Obtengo los datos de mis archivos .tsp
     def cargarDesdeFile(self, pathArchivo):
         # +-+-+-+-+-Para cargar la distancias+-+-+-+-+-+-+-+-
         archivo = open(pathArchivo, "r")
