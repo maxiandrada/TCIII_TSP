@@ -137,7 +137,7 @@ def insert_resolucionXInstancia(conn, resXinst):
 
 
 def insert_instancia(conn,instancia):
-    sql = ''' INSERT INTO Instancias (instanciaName,cantidadClientes,optimoConocido,coordenadas) VALUES (?,?,?,?) '''
+    sql = ''' INSERT INTO Instancias (instanciaName,cantidadNodos,optimoConocido,coordenadas) VALUES (?,?,?,?) '''
     cur = conn.cursor()
 
     cur.execute(sql, instancia)

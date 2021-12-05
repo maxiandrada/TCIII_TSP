@@ -64,20 +64,25 @@ class GUI(QMainWindow):
               self.threadpool.maxThreadCount())
 
 
-    def actualizarDatos(self):
+    def actualizarSet(self):
         filasSets = DB.select_sets(self.conn)
         self.tablaSetProblema.setRowCount(len(filasSets))
         self.tablaSetProblema.setHorizontalHeaderLabels(['Nombre Set'])
         for i in range(len(filasSets)):
             self.tablaSetProblema.setItem(i, 0, QTableWidgetItem(filasSets[i][1]))
             self.tablaSetProblema.setColumnWidth(i, 200)
+        print("Actualizar Set")
         self.tablaSetProblema.setSelectionBehavior(QTableView.SelectRows)
         self.tablaSetProblema.itemSelectionChanged.connect(
             lambda: self.establecerSetSeleccionado(self.tablaSetProblema, self.tablaInstancia))
         
+    def actualizarInstancias(self):
+        self.tablaInstancia.resizeColumnsToContents()
+        self.tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
+        self.tablaInstancia.itemSelectionChanged.connect(
+            lambda: self.establecerInstanciaSeleccionada(self.tablaInstancia))
 
     def seleccionarProblema(self):
-
         # Layout's
         layoutPrincipal = QVBoxLayout() # Va a contener a los demás layouts 
         layoutTablaSets = QGridLayout() # Va a contener al conjunto de instancias
@@ -97,7 +102,7 @@ class GUI(QMainWindow):
         botonNuevoSet = QPushButton("Nuevo Set")
         botonNuevoSet.clicked.connect(self.ventanaCargaSet)
 
-        # Botón para abrir ventana para cargar ventanas
+        # Botón para abrir ventana para cargar instancias
         botonNuevaInstancia = QPushButton("Nueva Instancias")
         botonNuevaInstancia.clicked.connect(self.ventanaCargaInstancia)
 
@@ -113,7 +118,7 @@ class GUI(QMainWindow):
         self.tablaSetProblema = QTableWidget()
         self.tablaSetProblema.setColumnCount(1)
         
-        self.actualizarDatos()
+        self.actualizarSet()
         # filasSets = DB.select_sets(self.conn)
         # self.tablaSetProblema.setRowCount(len(filasSets))
         # self.tablaSetProblema.setHorizontalHeaderLabels(['Nombre Set'])
@@ -126,10 +131,12 @@ class GUI(QMainWindow):
         
         # Tabla Instancias (Instancias por Sets)
         self.tablaInstancia = QTableWidget()
-        self.tablaInstancia.resizeColumnsToContents()
-        self.tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
-        self.tablaInstancia.itemSelectionChanged.connect(
-            lambda: self.establecerInstanciaSeleccionada(self.tablaInstancia))
+        
+        self.actualizarInstancias()
+        # self.tablaInstancia.resizeColumnsToContents()
+        # self.tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
+        # self.tablaInstancia.itemSelectionChanged.connect(
+        #     lambda: self.establecerInstanciaSeleccionada(self.tablaInstancia))
         
         #Seleccionar primera fila en tablaInstancia
         self.tablaSetProblema.selectRow(0)
@@ -157,7 +164,6 @@ class GUI(QMainWindow):
         layoutPrincipal.addLayout(layoutTablaSets)
         layoutPrincipal.addLayout(layoutTablaInstancias)
         layoutPrincipal.addLayout(layoutAcciones)
-
 
         #self.gridLayout.addLayout(layoutPrincipal, 0, 0)
         self.gridLayout.addWidget(gBTablaSets, 0, 0)
@@ -367,22 +373,27 @@ class GUI(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         instancias, _ = QFileDialog.getOpenFileNames(
-            self, "QFileDialog.getOpenFileNames()", "", "Archivos VRP (*.vrp)", options=options)
+            self, "QFileDialog.getOpenFileNames()", "", "Archivos TSP (*.tsp)", options=options)
         if instancias:
             for i in instancias:
                 self.cargarDesdeFile(i)
-                filaInstancia = (self.nombreArchivo, int(self.cantidadClientes), self.__nroVehiculos, json.dumps(
-                    self.__demanda), self.__capacidad, self.__optimo, json.dumps(self.coordenadas))
+                filaInstancia = (self.nombreArchivo, int(self.cantidadNodos), self.__optimo, json.dumps(self.coordenadas))
 
-                print(filaInstancia)
+                print("Fila Instancia: \n"+str(filaInstancia))
                 
                 idFila = DB.insert_instancia(self.conn, filaInstancia)
                 setSeleccionado = self.setsSeleccionados[-1].text()
                 setSeleccionado = DB.select_sets_con_nombre(self.conn, setSeleccionado)[0]
-                # print(idFila)
+                
+                print("idFila: "+str(idFila))
+                
                 DB.insert_instanciaXSet(
                     self.conn, (idFila, int(setSeleccionado[0]))
                     )
+
+            self.actualizarInstancias()
+            self.actualizarSet()
+            
 
     def ventanaCargaSet(self):
         # Definiciones
@@ -413,7 +424,7 @@ class GUI(QMainWindow):
             print("NOMBRE: ", nombre)
             DB.insert_set(self.conn, (nombre,))
             ventana.close()
-            self.actualizarDatos()
+            self.actualizarSet()
         else:
             error_dialog = QErrorMessage()
             error_dialog.setWindowTitle("ERROR")
@@ -426,10 +437,11 @@ class GUI(QMainWindow):
         self.setSeleccionado = str(index.row()+1)
         self.setsSeleccionados = tabla.selectedItems()
         print("Sets Seleccionados: ", self.setsSeleccionados)
-        for t in self.setsSeleccionados:
-            print("Set :", t.text())
-        print("Set Seleccionado: ", self.setSeleccionado)
-        self.llenarTablaInstancias(tablaInstancia)
+        if (self.setsSeleccionados != []):
+            for t in self.setsSeleccionados:
+                print("Set :", t.text())
+            print("Set Seleccionado: ", self.setSeleccionado)
+            self.llenarTablaInstancias(tablaInstancia)
 
     def establecerInstanciaSeleccionada(self, tabla):
         #print("instancia Seleccionada: ", tabla.selectedItems())
@@ -448,10 +460,11 @@ class GUI(QMainWindow):
         print("Set consulta: ", setSeleccionado)
         filasInstancias = DB.select_instanciaXSet(
             self.conn, setSeleccionado[0])
+        print(filasInstancias)
         tablaInstancia.setRowCount(len(filasInstancias))
-        tablaInstancia.setColumnCount(6)
+        tablaInstancia.setColumnCount(4)
         tablaInstancia.setHorizontalHeaderLabels(
-            ["ID Instancia", 'Nombre ', 'Clientes', "Vehículos", "Capacidad", "Óptimo Conocido"])
+            ["ID Instancia", 'Nombre ', 'Vertices', "Óptimo Conocido"])
         for i in range(len(filasInstancias)):
             tablaInstancia.setItem(
                 i, 0, QTableWidgetItem(str(filasInstancias[i][0])))
@@ -461,11 +474,10 @@ class GUI(QMainWindow):
                 i, 2, QTableWidgetItem(str(filasInstancias[i][2])))
             tablaInstancia.setItem(
                 i, 3, QTableWidgetItem(str(filasInstancias[i][3])))
-            tablaInstancia.setItem(
-                i, 4, QTableWidgetItem(str(filasInstancias[i][4])))
-            tablaInstancia.setItem(
-                i, 5, QTableWidgetItem(str(filasInstancias[i][5])))
-        self.instanciaSeleccionada = filasInstancias[0][0]
+        
+        if(len(filasInstancias)!=0):
+            self.instanciaSeleccionada = filasInstancias[0][0]
+
         #self.tablaInstancia.selectRow(0)
         #self.tablaInstancia.setCurrentIndex(QtCore.QModelIndex().child(0,0))
 
@@ -977,33 +989,35 @@ class GUI(QMainWindow):
         lineas = archivo.readlines()
         self.nombreArchivo = os.path.basename(archivo.name)
         self.nombreArchivo = self.nombreArchivo.split(".")[0]
+        # print(lineas)
         # Busco la posiciones de...
         try:
             indSeccionCoord = lineas.index("NODE_COORD_SECTION \n")
-            lineaEOF = lineas.index("DEMAND_SECTION \n")
+            lineaEOF = lineas.index("EOF \n")
         except ValueError:
             try:
                 indSeccionCoord = lineas.index("NODE_COORD_SECTION\n")
-                lineaEOF = lineas.index("DEMAND_SECTION\n")
+                lineaEOF = lineas.index("EOF\n")
             except ValueError:
                 indSeccionCoord = lineas.index("NODE_COORD_SECTION\t\n")
-                lineaEOF = lineas.index("DEMAND_SECTION\t\n")
+                lineaEOF = lineas.index("EOF\t\n")
 
+        print(indSeccionCoord)
         # Linea optimo y nro de vehiculos
-        lineaOptimo = [x for x in lineas[0:indSeccionCoord]
-                       if re.search(r"COMMENT+", x)][0]
+        lineaOptimo = [x for x in lineas[0:indSeccionCoord] if re.search(r"COMMENT+", x)][0]
+        print("lineaOptimo: "+lineaOptimo)
         parametros = re.findall(r"[0-9]+", lineaOptimo)
 
-        self.__nroVehiculos = int(float(parametros[0]))
-        self.__optimo = float(parametros[1])
+        # self.__nroVehiculos = int(float(parametros[0]))
+        self.__optimo = float(parametros[-1])
+        print("Optimo: ", self.__optimo)
 
         # Cargo la capacidad
-        lineaCapacidad = [x for x in lineas[0:indSeccionCoord]
-                          if re.search(r"CAPACITY+", x)][0]
-        parametros = re.findall(r"[0-9]+", lineaCapacidad)
+        # lineaCapacidad = [x for x in lineas[0:indSeccionCoord] if re.search(r"CAPACITY+", x)][0]
+        # parametros = re.findall(r"[0-9]+", lineaCapacidad)
 
-        self.__capacidad = float(parametros[0])
-        print("Capacidad: "+str(self.__capacidad))
+        # self.__capacidad = float(parametros[0])
+        # print("Capacidad: "+str(self.__capacidad))
 
         # Lista donde irán las coordenadas (vertice, x, y)
         coord = []
@@ -1019,33 +1033,36 @@ class GUI(QMainWindow):
             else:
                 coord.append([float(splitLinea[0]), float(splitLinea[1]), float(
                     splitLinea[2])])  # [[v1,x1,y1], [v2,x2,y2], ...]
-        #print("coordenadas: "+str(coordenadas))
         # self.cargaMatrizDistancias(coordenadas)
         self.coordenadas = coord
+        print("coordenadas: ")
+        print(self.coordenadas)
+        self.cantidadNodos = len(self.coordenadas)
+        print("Cantidad de clientes: ", self.cantidadNodos)
 
         # +-+-+-+-+-+-+-Para cargar la demanda+-+-+-+-+-+-+-
-        seccionDemanda = [x for x in lineas[indSeccionCoord:]
-                          if re.findall(r"DEMAND_SECTION+", x)][0]
-        indSeccionDemanda = lineas.index(seccionDemanda)
+        # seccionDemanda = [x for x in lineas[indSeccionCoord:]
+        #                   if re.findall(r"DEMAND_SECTION+", x)][0]
+        # indSeccionDemanda = lineas.index(seccionDemanda)
 
-        seccionEOF = [x for x in lineas[indSeccionCoord:]
-                      if re.findall(r"DEPOT_SECTION+", x)][0]
-        indLineaEOF = lineas.index(seccionEOF)
+        # seccionEOF = [x for x in lineas[indSeccionCoord:]
+        #               if re.findall(r"DEPOT_SECTION+", x)][0]
+        # indLineaEOF = lineas.index(seccionEOF)
 
-        demanda = []
-        for i in range(indSeccionDemanda+1, indLineaEOF):
-            textoLinea = lineas[i]
-            # Elimina los saltos de línea
-            textoLinea = re.sub("\n", "", textoLinea)
-            splitLinea = textoLinea.split()  # Divide la línea por " "
-            try:
-                demanda.append(float(splitLinea[1]))
-            except:
-                splitLinea = textoLinea.split()
-                demanda.append(float(splitLinea[1]))
+        # demanda = []
+        # for i in range(indSeccionDemanda+1, indLineaEOF):
+        #     textoLinea = lineas[i]
+        #     # Elimina los saltos de línea
+        #     textoLinea = re.sub("\n", "", textoLinea)
+        #     splitLinea = textoLinea.split()  # Divide la línea por " "
+        #     try:
+        #         demanda.append(float(splitLinea[1]))
+        #     except:
+        #         splitLinea = textoLinea.split()
+        #         demanda.append(float(splitLinea[1]))
         # print(str(demanda))
-        self.__demanda = demanda
-        self.cantidadClientes = len(self.__demanda)
+        # self.__demanda = demanda
+        # self.cantidadNodos = len(self.__demanda)
 
     def cargaMatrizDistancias(self, coordenadas):
         matriz = []
@@ -1301,9 +1318,9 @@ class GUI(QMainWindow):
                 elif s[0] == 5:
                     swaps[3] += 1
 
-        cantidadClientes = 0
+        cantidadNodos = 0
         for r in rutasNuevas:
-            cantidadClientes += len(r)
+            cantidadNodos += len(r)
 
         swapsStr = [solucionInicial] + swapsStr
         swapsStr.append("NS")
@@ -1325,8 +1342,8 @@ class GUI(QMainWindow):
             else:
                 solucionDB.append(s)
 
-        tenureADD = int(cantidadClientes * 0.05)
-        tenureDROP = int(cantidadClientes * 0.05) +1
+        tenureADD = int(cantidadNodos * 0.05)
+        tenureDROP = int(cantidadNodos * 0.05) +1
         resolucion = (cantidadIteraciones,
                       solucionDB[-1][0],
                       tenureADD,
