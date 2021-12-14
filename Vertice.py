@@ -4,6 +4,9 @@ class Vertice():
         self._value = V
         self._demanda = D
 
+    def __init__(self,V):
+        self._value = V
+
     def getValue(self):
         return self._value
     def setValue(self, V):

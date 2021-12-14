@@ -1,5 +1,5 @@
 NAME : Tnm52.tsp
-COMMENT : 52-city problem, points on edges of tetrahedron. n = 11  m = 7 (Hougardy + Zhong). Optimal value: 551,609
+COMMENT : 52-city problem, points on edges of tetrahedron. n = 11  m = 7 (Hougardy + Zhong). Optimal value: 551609
 TYPE : TSP
 DIMENSION : 52
 EDGE_WEIGHT_TYPE : EUC_2D

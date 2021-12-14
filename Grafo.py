@@ -7,7 +7,7 @@ import copy
 import numpy as np
 from time import time 
 class Grafo:
-    def __init__(self, M, D,G=None,vacio=False):
+    def __init__(self, M, G=None,vacio=False):
         if G is None:
             self._costoAsociado = 0
             self._V = []
@@ -17,8 +17,8 @@ class Grafo:
             self._matrizDistancias = M
             # self._demanda = D
             # self._demandaAcumulada = []
-            if(M!=[] and D!=[]):
-                self.cargarDesdeMatriz(M, D)
+            if(M!=[]):
+                self.cargarDesdeMatriz(M)
         else:
             if vacio:
                 self._V = []
@@ -43,7 +43,7 @@ class Grafo:
         t = time()
         self._A = A
         V = []
-        cap = 0
+        # cap = 0
         costo = 0
         # demAcum = 0
         # self._demandaAcumulada = []
@@ -57,7 +57,7 @@ class Grafo:
         self._V = V
         self._costoAsociado = costo
         # print(f"CargaDesdeAristas: {time()-t}")
-        return cap
+        # return cap
     
     def setDemanda(self, D):
         self._demanda = D
@@ -169,10 +169,10 @@ class Grafo:
         
         if(sinVerticeInicial):
             for x in secuencia:
-                V.append(Vertice(int(x)+1, self._demanda[x]))
+                V.append(Vertice(int(x)+1))
         else:
             for x in secuencia:
-                V.append(Vertice(int(x), self._demanda[x-1]))
+                V.append(Vertice(int(x)))
                     
         return V
 
@@ -181,18 +181,19 @@ class Grafo:
             self._V = []
         else:
             V = self._V
+        
         if(len(self._A)!=0):
             self._A = []
-        if(len(self._demandaAcumulada)!=0):
-            self._demandaAcumulada = []
+        # if(len(self._demandaAcumulada)!=0):
+        #     self._demandaAcumulada = []
         costo = 0
-        demAcum = 0
-        cap = 0
+        # demAcum = 0
+        # cap = 0
         #for x in secuencia:
         V = []
         for i in range(0, len(secuencia)):
             x = secuencia[i]
-            V.append(Vertice(int(x), self._demanda[x-1]))
+            V.append(Vertice(int(x)))
 
             if i>0:
                 Vfila = V[i-1]
@@ -203,10 +204,7 @@ class Grafo:
                 new_edge = Arista(Vfila, Vcol, dist)
                 new_edge.setId(fila, col, len(self._matrizDistancias))
                 self._A.append(new_edge)
-                demAcum += new_edge.getOrigen().getDemanda()
-                self._demandaAcumulada.append(demAcum)
                 costo+=dist
-                cap += Vfila.getDemanda()
         self.setV(V)
         Vfila = V[-1]
         Vcol = V[0]
@@ -216,14 +214,8 @@ class Grafo:
         new_edge = Arista(Vfila, Vcol, dist)
         new_edge.setId(fila, col, len(self._matrizDistancias))
         self._A.append(new_edge)
-        demAcum += new_edge.getOrigen().getDemanda()
-        self._demandaAcumulada.append(demAcum)
         costo+=dist
-        cap += Vfila.getDemanda()
         self._costoAsociado = costo
-
-        return cap
-        
 
     def cargaAristas(self):
         A=[]
@@ -266,13 +258,13 @@ class Grafo:
         self._A = self.cargaAristas()
 
     #Cargar las aristas
-    def cargarDesdeMatriz(self, Matriz, Demanda):
+    def cargarDesdeMatriz(self, Matriz):
         #for fila in range(0, len(Matriz)):
         #    self._V.append(Vertice(fila+1, Demanda[fila]))    #V=[1,3,4] A=[(1,3)(3,4)] => sol 1->3->4->5->2
         for fila in range(0, len(Matriz)):
-            self._V.append(Vertice(fila+1, Demanda[fila]))    #V=[1,3,4] A=[(1,3)(3,4)] => sol 1->3->4->5->2
+            self._V.append(Vertice(fila+1))    #V=[1,3,4] A=[(1,3)(3,4)] => sol 1->3->4->5->2
             for columna in range(0, len(Matriz[fila])):
-                aux = Arista(Vertice(fila+1, Demanda[fila]),Vertice(columna+1, Demanda[columna]),(Matriz[fila][columna]))
+                aux = Arista(Vertice(fila+1),Vertice(columna+1),(Matriz[fila][columna]))
                 aux.setId(fila, columna, len(Matriz))
                 self._A.append(aux)
                 #aux = Arista(self._V[fila],self._V[columna],(Matriz[fila][columna]))
@@ -296,11 +288,11 @@ class Grafo:
         self._V = seq
         if(len(self._A)!=0):
             self._A = []
-        if(len(self._demandaAcumulada)!=0):
-            self._demandaAcumulada = []
+        # if(len(self._demandaAcumulada)!=0):
+        #     self._demandaAcumulada = []
         costo = 0
-        demAcum = 0
-        cap = 0
+        # demAcum = 0
+        # cap = 0
         for i in range(0,len(seq)):
             if(i< len(seq)-1):
                 fila = seq[i].getValue()-1
@@ -316,14 +308,14 @@ class Grafo:
                 new_edge = Arista(seq[i], seq[0], dist)
                 new_edge.setId(fila, col, len(self._matrizDistancias))
                 self.getA().append(new_edge)
-            demAcum += new_edge.getOrigen().getDemanda()
-            self._demandaAcumulada.append(demAcum)
+            # demAcum += new_edge.getOrigen().getDemanda()
+            # self._demandaAcumulada.append(demAcum)
             costo+=dist
-            cap += seq[i].getDemanda()
+            # cap += seq[i].getDemanda()
         
         self._costoAsociado = costo
         # print(f"CargaDesdeSecuenciaDeVertices: {time()-t}")
-        return cap
+        # return cap
 
     def incrementaFrecuencia(self):
         for x in range(0,len(self.getA())):

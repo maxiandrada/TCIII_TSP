@@ -54,6 +54,7 @@ class GUI(QMainWindow):
 
 
         self.criteriosTenure = ["sqrt(n)/2","10/% de n", "5% de n"]
+        self.criteriosParada = ["Tiempo de ejecución","Porcentaje de desvío","Ambos (lo que suceda primero)"]
         self.gridLayout = QGridLayout(self)
         self.centralWidget.setLayout(self.gridLayout)
         self.seleccionarProblema()
@@ -117,7 +118,6 @@ class GUI(QMainWindow):
         # Tabla Sets (Conjunto de instancias)
         self.tablaSetProblema = QTableWidget()
         self.tablaSetProblema.setColumnCount(1)
-        
         self.actualizarSet()
         # filasSets = DB.select_sets(self.conn)
         # self.tablaSetProblema.setRowCount(len(filasSets))
@@ -131,7 +131,6 @@ class GUI(QMainWindow):
         
         # Tabla Instancias (Instancias por Sets)
         self.tablaInstancia = QTableWidget()
-        
         self.actualizarInstancias()
         # self.tablaInstancia.resizeColumnsToContents()
         # self.tablaInstancia.setSelectionBehavior(QTableView.SelectRows)
@@ -290,18 +289,13 @@ class GUI(QMainWindow):
                 print("cantidad ", _)
                 idInstancia = instancia[0]
                 n = instancia[2]
-                k = instancia[3]
-                D = json.loads(instancia[4])
-                C = instancia[5]
-                optimo = instancia[6]
-                coordenadas = json.loads(instancia[7])
+                k = 1
+                optimo = instancia[3]
+                coordenadas = json.loads(instancia[-1])
                 M = self.cargaMatrizDistancias(coordenadas)
                 tenureADD, tenureDROP = self.aplicarCriterioTenure(criterioTenure, n)
                 tsp = TSP(
                     M,
-                    D,
-                    k,
-                    C,
                     instancia[1]+"_"+str(tiempo)+"min",
                     os.getcwd(),
                     solucionInicial,
@@ -394,7 +388,6 @@ class GUI(QMainWindow):
             self.actualizarInstancias()
             self.actualizarSet()
             
-
     def ventanaCargaSet(self):
         # Definiciones
         ventanaCargarSet = QDialog(self)
@@ -484,8 +477,8 @@ class GUI(QMainWindow):
     def ventanaResolverInstancia(self):
         instancia = DB.select_instancia(
             self.conn, self.instanciaSeleccionada)[0]
-        print(instancia)
         ventanaResolverInstancia = QDialog(self)
+        print("Instancia: "+str(instancia))
 
         ventanaResolverInstancia.setWindowTitle("Resolviendo " + instancia[1])
         labelTitulo = QLabel(str(instancia[1]))
@@ -496,14 +489,18 @@ class GUI(QMainWindow):
         layoutVRI.addWidget(labelTitulo, 0, 0)
         ventanaResolverInstancia.setGeometry(100, 100, 1100, 600)
         ventanaResolverInstancia.setMinimumSize(QSize(1000, 600))
+        
         # Gráfico
-        coordenadas = json.loads(instancia[7])
+        coordenadas = json.loads(instancia[-1])
+        print("Coordenadas: "+str(coordenadas))
         self.grafico = self.graficoInstancia(layoutVRI, coordenadas, 1, 0)
+        
         # Layout Vertical Derecha
         layoutV = QVBoxLayout()
         layoutVG = QFormLayout()
         layoutVRI.addLayout(layoutV, 0, 1, 2, 1)
         layoutBotones = QHBoxLayout()
+
         #GroupBox's
         gBDatosInstancia = QGroupBox("Datos Instancia")
         gBResolver = QGroupBox("Resolver")
@@ -513,15 +510,18 @@ class GUI(QMainWindow):
         layoutV.addWidget(gBResolver)
         layoutV.addWidget(gBReportes)
         layoutV.addLayout(layoutBotones)
+
         # Solución Inicial
         labelSolucionInicial = QLabel("Seleccione Solución Inicial")
         cbSolucionInicial = QComboBox()
         cbSolucionInicial.addItems(
             ["Clarke Wright", "Vecino Cercano", "Secuencial"])
+
         #Criterio Tenure
         cbCriterioTenure = QComboBox()
         cbCriterioTenure.addItems(self.criteriosTenure)
-       # Tenures
+
+        #Tenures
         sbTenureADD = QSpinBox()
         criteriosTenure = self.aplicarCriterioTenure(cbCriterioTenure.currentIndex(), instancia[2])
         sbTenureADD.setValue(criteriosTenure[0])
@@ -529,15 +529,26 @@ class GUI(QMainWindow):
         sbTenureDROP.setValue(criteriosTenure[1])
         cbCriterioTenure.currentIndexChanged.connect(
             lambda: self.establecerCriterioSeleccionado(cbCriterioTenure, sbTenureADD,sbTenureDROP, instancia[2]))
+                
         # Tiempo ejecución
         labelTiempoEjecucion = QLabel("Tiempo Ejecución")
-        leTiempoEjecucion = QLineEdit()
-        leTiempoEjecucion.setValidator(QDoubleValidator(0.0, 100.0, 2))
-        leTiempoEjecucion.setText("0.1")
+        self.lblTiempoEjecucion = QLineEdit()
+        self.lblTiempoEjecucion.setValidator(QDoubleValidator(0.0, 100.0, 2))
+        self.lblTiempoEjecucion.setText("0.1")
+        self.lblTiempoEjecucion.setDisabled(False)
         labelMinutos = QLabel("Minutos")
+
         # Porcentaje de parada
         labelParada = QLabel("Error respecto a óptimo conocido")
-        sbParada = QSpinBox()
+        self.sbParada = QSpinBox()
+        self.sbParada.setDisabled(True)
+        
+        # Criterio de parada
+        cbCriterioParada = QComboBox()
+        cbCriterioParada.addItems(self.criteriosParada)
+        cbCriterioParada.currentIndexChanged.connect(
+            lambda: self.establecerCriterioParada(cbCriterioParada, self.lblTiempoEjecucion, self.sbParada))
+
         # Boton resolver
         botonResolver = QPushButton("Resolver")
         botonVerResultados = QPushButton("Ver Resultados")
@@ -546,11 +557,12 @@ class GUI(QMainWindow):
         layoutVG.addRow("Criterio Tenure ", cbCriterioTenure)
         layoutVG.addRow("Tenure ADD", sbTenureADD)
         layoutVG.addRow("Tenure DROP", sbTenureDROP)
-        layoutVG.addRow("Tiempo en minutos", leTiempoEjecucion)
-        layoutVG.addRow("Porcentaje de parada: ", sbParada)
+        layoutVG.addRow("Criterio de Parada ", cbCriterioParada)
+        layoutVG.addRow("Tiempo en minutos", self.lblTiempoEjecucion)
+        layoutVG.addRow("Porcentaje de parada: ", self.sbParada)
 
         #Botones Grafico
-        botonGraficoHistoria = QPushButton("Historia Instancias")
+        botonGraficoHistoria = QPushButton("Historial de Instancias")
         botonGraficoHistoria.clicked.connect(lambda: self.graficarHistoriaInstancia(instancia))
         layoutBotones.addWidget(botonGraficoHistoria)
 
@@ -558,16 +570,17 @@ class GUI(QMainWindow):
         layoutBotones.addWidget(botonVerResultados)
 
         resolver = lambda: self.resolverTSP(instancia,
-                                                        cbSolucionInicial,
-                                                        sbTenureADD,
-                                                        sbTenureDROP,
-                                                        leTiempoEjecucion,
-                                                        sbParada,
-                                                        coordenadas,
-                                                        self.conn,
-                                                        cbCriterioTenure.currentIndex()
-                                                        )
+                                            cbSolucionInicial,
+                                            sbTenureADD,
+                                            sbTenureDROP,
+                                            cbCriterioParada.currentIndex(),
+                                            self.lblTiempoEjecucion,
+                                            self.sbParada,
+                                            coordenadas,
+                                            self.conn,
+                                            cbCriterioTenure.currentIndex())
         botonResolver.clicked.connect(resolver)
+
         verResultados = lambda: self.ventanaVerResultado(instancia[0], instancia[1])
         botonVerResultados.clicked.connect(verResultados)
         ventanaResolverInstancia.show()
@@ -583,27 +596,46 @@ class GUI(QMainWindow):
         sbTenureADD.setValue(criteriosTenure[0])
         sbTenureDROP.setValue(criteriosTenure[1])
 
-    def resolverTSP(self, instancia, cbSolucionInicial, sbTenureADD, sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, db, criterioTenure):
+    def establecerCriterioParada(self, cbCriterioParada, lblTiempoEjecucion, sbParada):
+        opcionParada = cbCriterioParada.currentIndex()
+        if opcionParada == 0:
+            lblTiempoEjecucion.setDisabled(False)
+            sbParada.setDisabled(True)
+        elif opcionParada == 1:
+            lblTiempoEjecucion.setDisabled(True)
+            sbParada.setDisabled(False)
+        elif opcionParada == 2:
+            lblTiempoEjecucion.setDisabled(False)
+            sbParada.setDisabled(False)    
+
+    def resolverTSP(self, instancia, cbSolucionInicial, sbTenureADD, sbTenureDROP, criterioParada, lblTiempoEjecucion, sbParada, coordenadas, db, criterioTenure):
         # Parámetros iniciales ingresados por el usuario
         solucionInicial = cbSolucionInicial.currentIndex()
         tenureADD = sbTenureADD.value()
         tenureDROP = sbTenureDROP.value()
-        tiempo = float(leTiempoEjecucion.text())
+        
+        tiempo = float(lblTiempoEjecucion.text())
         porcentaje = sbParada.value()
+        
+        if criterioParada == 0:
+            tiempo = float(lblTiempoEjecucion.text())
+            porcentaje = float("-inf")
+        elif criterioParada == 1:
+            tiempo = float("inf")
+            porcentaje = sbParada.value()
+        
+        print("Tiempo: "+str(tiempo))
+        print("porcentaje:"+ str(porcentaje))
+        
         # Datos de la instancia
         idInstancia = instancia[0]
         self.n = instancia[2]
-        self.k = instancia[3]
-        self.D = json.loads(instancia[4])
-        self.C = instancia[5]
-        optimo = instancia[6]
-        self.coordenadas = json.loads(instancia[7])
+        optimo = instancia[3]
+        self.coordenadas = json.loads(instancia[-1])
         self.M = self.cargaMatrizDistancias(self.coordenadas)
+
         tsp = TSP(
             self.M,
-            self.D,
-            self.k,
-            self.C,
             instancia[1]+"_"+str(tiempo)+"min",
             os.getcwd(),
             solucionInicial,
@@ -612,7 +644,7 @@ class GUI(QMainWindow):
             tiempo,
             porcentaje,
             optimo,
-            True,#Este es para indicar de que cargue los datos en la DB
+            True, #Este es para indicar de que cargue los datos en la DB
             idInstancia,
             criterioTenure, #Criterio que se tomó para calcular el tenure
             coordenadas=self.coordenadas
@@ -706,9 +738,9 @@ class GUI(QMainWindow):
         treeSoluciones.setHeaderLabels(['Iteración', 'Costo', "Origen"])
         treeSoluciones.itemClicked.connect(lambda: self.establecerSolucionSeleccionada(
                                         graficoSoluciones,
-                                        instancia[7],
+                                        instancia[-1],
                                         treeSoluciones,
-                                        instancia[3])
+                                        1)
                                     )
         # Eventos de Tabla Resoluciones
         tablaResoluciones.resizeRowToContents(5)
@@ -878,14 +910,14 @@ class GUI(QMainWindow):
     def seleccionarPrimerFilaTW(self, treeSoluciones, graficoSoluciones, instancia):
         primeraFila = treeSoluciones.invisibleRootItem().child(0)
         treeSoluciones.setCurrentItem(primeraFila)
-        self.establecerSolucionSeleccionada(graficoSoluciones, instancia[7], treeSoluciones, instancia[3])
+        self.establecerSolucionSeleccionada(graficoSoluciones, instancia[-1], treeSoluciones, 1)
 
     def seleccionarUltimaFilaTW(self, treeSoluciones, graficoSoluciones, instancia):
         root = treeSoluciones.invisibleRootItem()
         cantidadDeHijos = root.childCount()
         ultimaFila = root.child(cantidadDeHijos-1)
         treeSoluciones.setCurrentItem(ultimaFila)
-        self.establecerSolucionSeleccionada(graficoSoluciones, instancia[7], treeSoluciones, instancia[3])
+        self.establecerSolucionSeleccionada(graficoSoluciones, instancia[7], treeSoluciones, 1)
 
     def seleccionarFilaTW(self, treeSoluciones, graficoSoluciones, instancia, orden):
         root = treeSoluciones.invisibleRootItem()
@@ -899,7 +931,7 @@ class GUI(QMainWindow):
                 filaActual += 1
         filaSeleccionada = root.child(filaActual)
         treeSoluciones.setCurrentItem(filaSeleccionada)
-        self.establecerSolucionSeleccionada(graficoSoluciones, instancia[7], treeSoluciones, instancia[3])
+        self.establecerSolucionSeleccionada(graficoSoluciones, instancia[-1], treeSoluciones, 1)
 
     @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem)
     def establecerSolucionSeleccionada(self, grafico, coordenadas, arbol, nroVehiculos):
@@ -1040,30 +1072,6 @@ class GUI(QMainWindow):
         self.cantidadNodos = len(self.coordenadas)
         print("Cantidad de clientes: ", self.cantidadNodos)
 
-        # +-+-+-+-+-+-+-Para cargar la demanda+-+-+-+-+-+-+-
-        # seccionDemanda = [x for x in lineas[indSeccionCoord:]
-        #                   if re.findall(r"DEMAND_SECTION+", x)][0]
-        # indSeccionDemanda = lineas.index(seccionDemanda)
-
-        # seccionEOF = [x for x in lineas[indSeccionCoord:]
-        #               if re.findall(r"DEPOT_SECTION+", x)][0]
-        # indLineaEOF = lineas.index(seccionEOF)
-
-        # demanda = []
-        # for i in range(indSeccionDemanda+1, indLineaEOF):
-        #     textoLinea = lineas[i]
-        #     # Elimina los saltos de línea
-        #     textoLinea = re.sub("\n", "", textoLinea)
-        #     splitLinea = textoLinea.split()  # Divide la línea por " "
-        #     try:
-        #         demanda.append(float(splitLinea[1]))
-        #     except:
-        #         splitLinea = textoLinea.split()
-        #         demanda.append(float(splitLinea[1]))
-        # print(str(demanda))
-        # self.__demanda = demanda
-        # self.cantidadNodos = len(self.__demanda)
-
     def cargaMatrizDistancias(self, coordenadas):
         matriz = []
         # Arma la matriz de distancias. Calculo la distancia euclidea
@@ -1105,13 +1113,13 @@ class GUI(QMainWindow):
             x += [self.coordenadas[0][1]]
             y += [self.coordenadas[0][2]]
             ruta = self.grafico.plot(x, y, pen=(
-                i, self.k), symbol='o', symbolBrush=(i, self.k))
+                i, 1), symbol='o', symbolBrush=(i, 1))
             self.rutasDict[i] = ruta
             i += 1
         x = [self.coordenadas[0][1]]
         y = [self.coordenadas[0][2]]
         deposito = self.grafico.plot(x, y, pen=(
-            0, self.k), symbol='h', symbolSize=20, symbolBrush=(255, 255, 255))
+            0, 1), symbol='h', symbolSize=20, symbolBrush=(255, 255, 255))
         self.rutasDict[i+1] = deposito
 
     def dibujarRutasNuevas(self, R):
@@ -1137,7 +1145,7 @@ class GUI(QMainWindow):
             x += [self.coordenadas[0][1]]
             y += [self.coordenadas[0][2]]
             ruta = self.grafico.plot(x, y, pen=(
-                indRutas[i], self.k), symbol='o', symbolBrush=(indRutas[i], self.k))
+                indRutas[i], 1), symbol='o', symbolBrush=(indRutas[i], 1))
             self.rutasDict[indRutas[i]] = ruta
             i += 1
 

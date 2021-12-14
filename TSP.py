@@ -17,27 +17,26 @@ import json
 
 class TSP:
     def __init__(self,
-                 M,
-                 D,
-                 archivo,
-                 carpeta,
-                 solI,
-                 tADD,
-                 tDROP,
-                 tiempo,
-                 porcentaje,
-                 optimo,
-                 cargarEnDB=None,
-                 idInstancia=None,
-                 criterioTenure=None,
-                 coordenadas=None,
-                 cantidad=None,
-                 orden=None,
-                 indBarra=None):
+                M,
+                archivo,
+                carpeta,
+                solI,
+                tADD,
+                tDROP,
+                tiempo,
+                porcentaje,
+                optimo,
+                cargarEnDB=None,
+                idInstancia=None,
+                criterioTenure=None,
+                coordenadas=None,
+                cantidad=None,
+                orden=None,
+                indBarra=None):
         
         self.__solInicial = ['Clark & Wright', 'Vecino cercano', 'Secuencial', 'Al azar']
-        self._G = Grafo(M, D)                #Grafo original
-        self.__S = Solucion(M, D, sum(D))    #Solucion general del TSP
+        self._G = Grafo(M)                #Grafo original
+        self.__S = Solucion(M)    #Solucion general del TSP
         self.__Distancias = M                #Matriz de distancias
         self.__rutas = []                    #Soluciones por vehiculo (lista de soluciones)
         self.__tipoSolucionIni = solI        #Tipo de solucion inicial (Clark & Wright, Vecino cercano, Secuencial o al Azar)
@@ -53,16 +52,16 @@ class TSP:
         self.__txt = clsTxt(str(archivo), str(carpeta), "nada", "nada")
         self.__tiempoMaxEjec = float(tiempo)
         self.escribirDatos()
-        
-        self.__S.setCapacidadMax(self.__capacidadMax)
+
         tiempoIni = time()
         
         """
         Se obtienen las rutas correspondiente a la solución inicial seleccionada, solo si es factible.
         En caso contrario, se elige una solución inicial que sea factible.
         """
-        self.__rutas, self.__tipoSolucionIni = self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax, self._G)
+        self.__rutas, self.__tipoSolucionIni = self.__S.rutasIniciales(self.__tipoSolucionIni, self._G)
         self.__tiempoMaxEjec = self.__tiempoMaxEjec - ((time()-tiempoIni)/60)
+        
         #tiempoIni = time()
         self.__S, strText = self.cargaSolucion(self.__rutas)
         print("costo Total sol inicial", sum([x.getCostoAsociado() for x in self.__rutas ]))
@@ -79,7 +78,6 @@ class TSP:
             self.coord = coordenadas
         
         self.conn = DB.DB()
-        #self.tabuSearch()
         self.swaps = [0]*4
         self.__swapOptimoLocal = []   #tipo de swap que usó para el óptimo local N
         self.__iteracionOptimoLocal = []          #iteración en la que se encontró el optimo local
@@ -110,21 +108,13 @@ class TSP:
     #Escribe los datos iniciales: el grafo inicial y la demanda
     def escribirDatos(self):
         self.__txt.escribir("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ GRAFO CARGADO +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
-        #self.__txt.escribir(str(self._G))
-        cad = "\nDemandas:"
-        for v in self._G.getV():
-            cad_aux = str(v)+": "+str(v.getDemanda())
-            cad+="\n"+ cad_aux
-        self.__txt.escribir(cad)
-        print("\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ GRAFO CARGADO +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
-        print("Nro vehiculos: ",self.__nroVehiculos)
+        self.__txt.escribir(str(self._G))
         self.__txt.escribir("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ SOLUCION INICIAL +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
 
     #Carga la solucion general a partir de las rutas
     def cargaSolucion(self, rutas):
         # t = time()
-        S = Solucion(self.__Distancias, self.__Demandas, sum(self.__Demandas),self._G,True)
-        cap = 0
+        S = Solucion(self.__Distancias,self._G,True)
         costoTotal = 0
         sol_ini = ""
         
@@ -138,19 +128,17 @@ class TSP:
                 print("rutas: "+str(rutas))
                 print("i: ", i)
                 #a = 1/0
-            cap += s.getCapacidad()
             S.getA().extend(s.getA())
             S.getV().extend(s.getV())
             sol_ini+="\nRuta #"+str(i+1)+": "+str(s.getV())
             #sol_ini+="\nAristas: "+str(s.getA())
-            sol_ini+="\nCosto asociado: "+str(s.getCostoAsociado())+"      Capacidad: "+str(s.getCapacidad())+"\n"
-        sol_ini+="\n--> Costo total: "+str(costoTotal)+"          Capacidad total: "+str(cap)
+            sol_ini+="\nCosto asociado: "+str(s.getCostoAsociado())+"\n"
+        sol_ini+="\n--> Costo total: "+str(costoTotal)
         # print(sol_ini)
         # print("+-+-++-+-++-+-++-+-++-+-++-+-++-+-++-+-+")
         costoTotal = round(costoTotal, 5)
         S.setCostoAsociado(costoTotal)
-        S.setCapacidad(cap)
-        S.setCapacidadMax(self.__capacidadMax)
+        
         # print(f"cargaSolucion: {time()-t}")
         return S, sol_ini
 
@@ -175,7 +163,7 @@ class TSP:
     #n = nro de clientes
     def calculaUmbral(self, costo):
         c = costo
-        k = self.__nroVehiculos
+        k = 1
         n = len(self.__Distancias)-1
         phi = c/(n+k)
         phi = phi*self.__beta
@@ -194,6 +182,10 @@ class TSP:
     iteracEstancamiento: iteraciones de estancamiento para admitir una solución peor, modificar Beta y escapar del estancamiento
     iterac: cantidad de iteraciones actualmente
     """
+    def tabuSearch1(self):
+        print("tabu search...")
+        # self.tabuSearch()
+
     def tabuSearch(self):
         lista_tabu = ListaTabu()
         ind_permitidos = np.array([], dtype = int)
@@ -277,6 +269,8 @@ class TSP:
                 rutas_refer = nuevas_rutas
                 solucion_refer = nueva_solucion
                 porcentaje = round(nuevo_costo/self.__optimo -1.0, 3)
+
+                print("Nueva solucion: "+str(nueva_solucion))
 
                 #Si la nueva solucion es mejor que la obtenida hasta el momento
                 if(nuevo_costo < costoSolucion):
@@ -427,7 +421,7 @@ class TSP:
                 umbral = self.calculaUmbral(nueva_solucion.getCostoAsociado())
                 cond_Optimiz = True
                 self.__beta = 3
-                lista_taba.limpiarLista()
+                lista_tabu.limpiarLista()
                 ind_permitidos = ind_AristasOpt
                 # Aristas = Aristas_Opt
                 umbral = self.calculaUmbral(costo)
@@ -551,7 +545,7 @@ class TSP:
         S -> r1: 1-2-3-4-5   r2: 1-6-7-8-9-10
         G -> r1: 1-2-5-4-6   r2: 1-3-9-10-7-8
         Despues:
-        S -> r1: 1-2-5-4-3   r2: 1-6-7-8-9-10
+        S -> r1: 1-2-3-4-5   r2: 1-6-7-8-9-10
         G -> r1: 1-2-5-4-6   r2: 1-3-9-10-7-8
         (con distinto tamaño)
         Antes:
@@ -591,7 +585,7 @@ class TSP:
                     V_S[indS[1]] = V_G[indG[1]]
                     V_S[sigIndS[1]] = aristaAux
                     capS = S[indS[0]].cargarDesdeSecuenciaDeVertices(V_S)
-                    S[indS[0]].setCapacidad(capS)
+                    
                     if rutasInfactibles == set():
                         esFactible = True
                 
@@ -644,10 +638,10 @@ class TSP:
                     V_sigS.insert(1, aristaAux)
                 
                 capS = S[ind].cargarDesdeSecuenciaDeVertices(V_S)
-                S[ind].setCapacidad(capS)
+                # S[ind].setCapacidad(capS)
                 
                 capSigS = S[proxInd].cargarDesdeSecuenciaDeVertices(V_sigS)
-                S[proxInd].setCapacidad(capSigS)
+                # S[proxInd].setCapacidad(capSigS)
                 
                 if capS > self.__capacidadMax or capSigS > self.__capacidadMax:
                     if capS > self.__capacidadMax:
@@ -668,19 +662,20 @@ class TSP:
 
     #Son de iguales Tamaño y/o Recorrido (ale: Calcula a partir de que ruta son de distinto tamaño >:V)
     def igualesTam(self, S, G, indDistTam):
-        i = 0
+        # i = 0
         
-        while i < self.__nroVehiculos:
-            S_V = S[i].getV()
-            G_V = G[i].getV()
-            lenSV = len(S_V)
-            lenGV = len(G_V)
-            if lenSV != lenGV:
-                indDistTam = i
-                break
-            i+=1
+        # while i < 1:
+        #     S_V = S[i].getV()
+        #     G_V = G[i].getV()
+        #     lenSV = len(S_V)
+        #     lenGV = len(G_V)
+        #     if lenSV != lenGV:
+        #         indDistTam = i
+        #         break
+        #     i+=1
         
-        return indDistTam if i < self.__nroVehiculos else -1
+        # return indDistTam if i < self.__nroVehiculos else -1
+        return 0
 
     def igualesRec(self, S, G, indS, indG):
         igualRec = True
@@ -780,16 +775,14 @@ class TSP:
         sol_ini = ""
         for i in range(0, len(self.__rutas)):
             sol_ini+="\nRuta #"+str(i+1)+": "+str(self.__rutas[i].getV())
-            sol_ini+="\nCosto asociado: "+str(self.__rutas[i].getCostoAsociado())+"      Capacidad: "+str(self.__rutas[i].getCapacidad())+"\n"
+            sol_ini+="\nCosto asociado: "+str(self.__rutas[i].getCostoAsociado())+"\n"
         self.__txt.escribir(sol_ini)
         porcentaje = round(self.__S.getCostoAsociado()/self.__optimo -1.0, 3)
         self.__txt.escribir("\nCosto total:  " + str(self.__S.getCostoAsociado()) + "        Optimo real:  " + str(self.__optimo)+
                             "      Desviación: "+str(porcentaje*100)+"%")
         self.__txt.escribir("\nSolucion inicial: "+str(self.__solInicial[self.__tipoSolucionIni]))
         self.__txt.escribir("Cantidad de iteraciones: "+str(iterac))
-        self.__txt.escribir("Nro de clientes: "+str(len(self.__Distancias)-1))
-        self.__txt.escribir("Nro de vehiculos: "+str(self.__nroVehiculos))
-        self.__txt.escribir("Capacidad Maxima/Vehiculo: "+str(self.__capacidadMax))
+        self.__txt.escribir("Nro de vértices: "+str(len(self.__Distancias)-1))
         self.__txt.escribir("Tiempo total: " + str(int(tiempoTotal/60))+"min "+str(int(tiempoTotal%60))+"seg")
         tiempoTotal = time()-tiempoEstancamiento
         self.__txt.escribir("Tiempo de estancamiento: "+str(int(tiempoTotal/60))+"min "+str(int(tiempoTotal%60))+"seg")
