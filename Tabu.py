@@ -1,4 +1,5 @@
 import numpy as np
+
 class Tabu:
     def __init__(self, E, T):
         self.__elemento = E 

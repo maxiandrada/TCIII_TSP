@@ -47,7 +47,7 @@ class GUI(QMainWindow):
         self.conn = DB.DB()
 
         self.setMinimumSize(QSize(1000, 600))
-        self.setWindowTitle("Capacited Vehicle Routing Problem - Tabu Search")
+        self.setWindowTitle("Travelling Salesman Problem (TSP)")
 
         self.centralWidget = QWidget(self)
         self.setCentralWidget(self.centralWidget)

@@ -270,12 +270,12 @@ class Solucion(Grafo):
     def estaEnUnRutaNoVacia(self,v1,rutas):
         return len(rutas[v1])>2 
 
-    def cargaTotal(self, dem,ruta):
-        suma = 0
-        for r in ruta:
-            suma += dem[r-1]
-        self.capacidad = suma
-        return suma
+    # def cargaTotal(self, dem,ruta):
+    #     suma = 0
+    #     for r in ruta:
+    #         suma += dem[r-1]
+    #     self.capacidad = suma
+    #     return suma
 
     def removeRuta(self,index,rutas):
         rutas.pop(index) 
